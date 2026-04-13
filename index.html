@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="DP Calc" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Directional Preponderance Calculator</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --ok-bg: #ecfdf5;
+      --ok-border: #86efac;
+      --warn-bg: #fef2f2;
+      --warn-border: #fca5a5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    .wrap { max-width: 480px; margin: 0 auto; }
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.3; }
+    p { margin: 0 0 16px; color: var(--muted); font-size: 0.95rem; line-height: 1.45; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+    input:focus {
+      outline: 2px solid rgba(15, 118, 110, 0.18);
+      border-color: var(--accent);
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary { background: var(--accent); color: white; }
+    .primary:active { background: var(--accent-dark); }
+    .secondary { background: #e5e7eb; color: var(--text); }
+    .result {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid #a5f3fc;
+      background: #ecfeff;
+    }
+    .result.normal { background: var(--ok-bg); border-color: var(--ok-border); }
+    .result.abnormal { background: var(--warn-bg); border-color: var(--warn-border); }
+    .result-label { font-size: 0.95rem; font-weight: 700; }
+    .result-value { font-size: 2rem; font-weight: 800; margin-top: 4px; line-height: 1.15; }
+    .result-note { margin-top: 6px; font-size: 0.95rem; color: var(--muted); }
+    .formula {
+      margin-top: 18px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .install-tip {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .error { margin-top: 14px; color: #b91c1c; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Directional Preponderance Calculator</h1>
+      <p>Enter the four time constants and tap Calculate.</p>
+
+      <div class="field">
+        <label for="rtStart">Right Start TC</label>
+        <input id="rtStart" type="number" inputmode="decimal" step="any" placeholder="e.g. 12.5" />
+      </div>
+
+      <div class="field">
+        <label for="rtStop">Right Stop TC</label>
+        <input id="rtStop" type="number" inputmode="decimal" step="any" placeholder="e.g. 10.2" />
+      </div>
+
+      <div class="field">
+        <label for="ltStart">Left Start TC</label>
+        <input id="ltStart" type="number" inputmode="decimal" step="any" placeholder="e.g. 11.8" />
+      </div>
+
+      <div class="field">
+        <label for="ltStop">Left Stop TC</label>
+        <input id="ltStop" type="number" inputmode="decimal" step="any" placeholder="e.g. 9.6" />
+      </div>
+
+      <div class="buttons">
+        <button class="primary" onclick="calculateDP()">Calculate</button>
+        <button class="secondary" onclick="clearForm()">Clear</button>
+      </div>
+
+      <div id="error" class="error" style="display:none;"></div>
+
+      <div id="result" class="result" style="display:none;">
+        <div class="result-label">Result</div>
+        <div id="resultValue" class="result-value">0.0%</div>
+        <div id="resultNote" class="result-note"></div>
+      </div>
+
+      <div class="install-tip">
+        On iPhone: open this page in Safari, tap Share, then Add to Home Screen.
+      </div>
+
+      <div class="formula">
+        DP = ((Right Start TC + Left Stop TC) − (Left Start TC + Right Stop TC)) ÷
+        (Right Start TC + Left Stop TC + Left Start TC + Right Stop TC) × 100
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function calculateDP() {
+      const rtStart = parseFloat(document.getElementById('rtStart').value);
+      const rtStop = parseFloat(document.getElementById('rtStop').value);
+      const ltStart = parseFloat(document.getElementById('ltStart').value);
+      const ltStop = parseFloat(document.getElementById('ltStop').value);
+
+      const errorEl = document.getElementById('error');
+      const resultEl = document.getElementById('result');
+      const resultValueEl = document.getElementById('resultValue');
+      const resultNoteEl = document.getElementById('resultNote');
+
+      errorEl.style.display = 'none';
+      resultEl.style.display = 'none';
+      resultEl.classList.remove('normal', 'abnormal');
+
+      if ([rtStart, rtStop, ltStart, ltStop].some(v => Number.isNaN(v))) {
+        errorEl.textContent = 'Please enter all four values.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const numerator = (rtStart + ltStop) - (ltStart + rtStop);
+      const denominator = rtStart + ltStop + ltStart + rtStop;
+
+      if (denominator === 0) {
+        errorEl.textContent = 'The total cannot be zero.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const dp = (numerator / denominator) * 100;
+      const dpRounded = dp.toFixed(1);
+
+      let interpretation = '';
+      let note = '';
+      let resultClass = 'normal';
+
+      if (Math.abs(dp) <= 25) {
+        interpretation = 'Normal';
+        note = 'Within 25%.';
+      } else if (dp > 25) {
+        interpretation = 'Right-sided weakness';
+        note = 'Positive DP above 25%.';
+        resultClass = 'abnormal';
+      } else {
+        interpretation = 'Left-sided weakness';
+        note = 'Negative DP below -25%.';
+        resultClass = 'abnormal';
+      }
+
+      resultValueEl.textContent = `${dpRounded}%`;
+      resultNoteEl.textContent = interpretation + ' — ' + note;
+      resultEl.classList.add(resultClass);
+      resultEl.style.display = 'block';
+    }
+
+    function clearForm() {
+      document.getElementById('rtStart').value = '';
+      document.getElementById('rtStop').value = '';
+      document.getElementById('ltStart').value = '';
+      document.getElementById('ltStop').value = '';
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('result').classList.remove('normal', 'abnormal');
+      document.getElementById('resultNote').textContent = '';
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
